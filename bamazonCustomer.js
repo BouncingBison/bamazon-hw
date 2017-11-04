@@ -1,158 +1,188 @@
 var express = require('express');
-var sql = require('mysql');
+var mysql = require('mysql');
 var colors = require('colors');
 var clear = require('clear');
 var fs = require('fs');
 var inquirer = require('inquirer');
 var sequelize = require('sequelize');
 var bodyParser = require('body-parser');
+var cli_table = require('cli-table');
+var beeper = require('beeper');
+var cli_boxes = require('cli-boxes');
+var figures = require('figures');
+var chalk = require('chalk');
+var util = require('util');
 
+// creating our mySQL connection 
+var connection = mysql.createConnection({
+    host: 'localhost',
+    port: 3306,
+    user: 'root',
+    password: '',
+    database: 'spice_rack_test'
+});
+// when we are connected the console will beep 4 times
+connection.connect(function(err) {
+    if (err) throw (err);
 
+    // using * for beep and _ for pause you can set you own beep melody 
+    beeper('*_*');
 
-// take inputs 
+    lobby();
+});
+// END CONNECTION
 
-var productPrompt = {
-    type: 'list',
-    name: 'products list',
-    message: 'Welcome to the Spice Rack, your online spice emporium',
-    choices: [{
+function lobby() {
+    console.log("lobby function")
 
-            name: 'Curry',
-            value: 'curry'
-        },
-        {
+    inquirer.prompt([{
+        type: 'input',
+        name: 'fork',
+        message: 'Input A to see inventory, input B to skip to item selection'
+    }]).then(function(input) {
 
-            name: 'White Pepper',
-            value: 'white-pepper'
-        },
+        var forkSelection = input.fork;
 
-        {
+        if (forkSelection === 'A') {
+            inventory();
+        } else {
 
-            name: 'Pink Himalayan Salt',
-            value: 'pink-himalayan-salt'
-        },
-
-        {
-
-            name: '$affron',
-            value: 'saffron'
-        },
-
-        {
-
-            name: 'Mesquite',
-            value: 'mesquite'
-        },
-        {
-
-            name: 'Garam Marsala',
-            value: 'garam-marsala'
-        },
-        {
-
-            name: 'Mustard Seed',
-            value: 'mustard-seed'
-        },
-        {
-
-            name: 'Cumin',
-            value: 'cumin'
-        },
-        {
-
-            name: 'Coriander',
-            value: 'coriander'
-        },
-        {
-
-            name: 'Chili-P',
-            value: 'chili-powder'
+            makeSelection();
         }
-    ]
+    });
+
 };
 
 
+function inventory() {
+    // selecting all items from products table
+    connection.query('SELECT * FROM products', function(err, res) {
+        var spices = res;
+        for (i = 0; i < res.length; i++) {
+            console.log("\n----------------------------------------------------------------------------------------")
+            console.log(res[i].id + ' Product Name: ' + res[i].spiceName + ' Price: ' + '$' + res[i].price + '(Quantity left: ' + res[i].stock + ')')
+        }
+        if (err) throw (err);
+
+        return spices.id;
+
+    });
+
+    inquirer.prompt([{
+        type: 'input',
+        name: 'ready',
+        message: 'Input \'ready\'to begin adding items to cart \n'
+    }]).then(function(input) {
+
+        var beginAddToCart = input.ready;
+
+        if (beginAddToCart === 'ready') {
+            makeSelection();
+        } else {
+            inventory();
+        }
+    });
+
+};
 
 
+function makeSelection() {
+
+    inquirer.prompt([{
+        type: 'checkbox',
+        name: 'products',
+        pageSize: (30),
+        message: 'Welcome to the Spice Rack, your online spice emporium',
+        choices: products,
+        filter: function(val) {
+            return val;
+        }
+    }]).then(function(val) {
+
+        console.log(val.products);
+        var arr = val.products;
+        // console.log(arr);
+        console.log("logging arr" + arr);
+        var cart = [];
+        // parseInt(arr)
+        // function loader(arr, cart) {
+        //     // for (i = 0; i < val.products.length; i++) {
+        //     //     if (val.products) {
+        //     //         var newItem = parseInt(val.products[i]);
+        //     //         cart.forEach(function(newItem) {
+        //     //             cart.push(newItem);
+        //     //         });
+        //     //     }
+
+        //     // }
+        // }
+
+    });
 
 
+    // connection.query("SELECT * FROM products", function(err, res, val) {
+    //     for (i = 0; i < res.length; i++) {
+    //         if (res[i].id === parseInt(val.products)) {
+    //             var cart = [];
+    //             cart.push(res[i].spiceName);
+    //             cart.forEach(function(item, index, array) {
+    //                 console.log(item, index);
+    //             });
+    //         }
+    //     }
+    //     return cart;
+    //     console.log(cart.length);
 
-
-
-
-// Run initial prompt.
-mainPrompt();
-// Initial question inquirer prompt.
-function mainPrompt() {
-
-
-
-    inquirer.prompt(productPrompt).then(secondSet);
+    // });
 
 }
+// return itemsToCart;
+// ["Apple", "Banana", "Orange"]
 
-
-
-// our express router 
-var router = express.Router();
-
-// Sets up the Express App
-// =============================================================
-var app = express();
-var PORT = process.env.PORT || 6069;
-
-
-// Sets up the Express app to handle data parsing
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(bodyParser.text());
-app.use(bodyParser.json({ type: "application/vnd.api+json" }));
-// app.use(express.static(path.join(__dirname, '/views/')));
-// app.use(express.static(path.join(__dirname, '/views/layouts/css')));
-
-
-
-// Routes
-// =============================================================
-require("./models/products.js")(app);
-var db = require('./models/products.js');
-
-// index page 
-// app.get('/products', function(req, res) {
-//     db.Patient.findAll({
-//         // need to do something in here to feed jquery? 
-//         // or handlebars? 
-//     }).then(function(dbPatients) {
-//         // console.log(dbPatients);
-//         console.log("server .get promise");
-//         console.log(dbPatients);
-//         res.render("patients", { patient_db: dbPatients });
-//         next();
-//     });
+// purchase(val, itemsToCart);
+// console.log("logging val.products: " + val.products);
+// itemsToCart.forEach(function(item, index, array) {
+//     console.log(item, index, array);
 // });
+// function pushToCart(arr) {
+//     itemsToCart.push(val.products);
+//     console.log("logging something" + val.products);
+//     console.log();
+// }
+// console.log(arr[i]);
+// connection.query('SELECT * FROM products', function(err, res, arr) {
+//     var cartedItem = arr;
+//     for (i = 0; i < cartedItem; i++) {
+//         console.log(cartedItem[i]);
+//     }
+// });
+// return itemsToCart;
+// purchase();
 
 
 
+// purchasing function 
 
-app.get('/products', function(req, res) {
+// var purchase = function(val, cart) {
 
-    db.Product.findAll({
+//     // bring in the val.products numbers 
+//     console.log("logging val.products: " + val.products);
+//     console.log(cart.length);
+// }
 
-    }).then(function(Product) {
 
-        console.log(product.item_id);
-        console.log("Product:" + product.product_name);
-        console.log("category" + product.department_name);
-        console.log("$" + product.price);
-        console.log("Items in stock: " + product.stock);
-    });
+// shipping 
 
-});
 
-// Syncing our sequelize models and then starting our Express app
-// // =============================================================
-db.sequelize.sync().then(function() {
-    app.listen(PORT, function() {
-        console.log("App listening on PORT " + PORT);
-    });
-});
+var products = [
+    { name: 'Curry', value: 1, },
+    { name: 'White Pepper', value: 2, },
+    { name: 'Pink Himalayan Salt', value: 3, },
+    { name: '$affron', value: 4, },
+    { name: 'Mesquite', value: 5, },
+    { name: 'Garam Marsala', value: 6, },
+    { name: 'Mustard Seed', value: 7, },
+    { name: 'Cumin', value: 8, },
+    { name: 'Coriander', value: 9, },
+    { name: 'Chili-P', value: 10 }
+]

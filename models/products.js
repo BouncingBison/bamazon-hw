@@ -1,28 +1,16 @@
-module.exports = function(sequelize, DataTypes) {
-    var Product = sequelize.define("Product", {
-        // first name 
-        item_id: {
-            type: DataTypes.INTEGER,
-            allowNull: false
-        },
-        // last name
-        product_name: {
-            type: DataTypes.STRING,
-            allowNull: false
-        },
-        department_name: {
-            type: DataTypes.STRING,
-            allowNull: false
-        },
-        price: {
-            type: DataTypes.INTEGER,
-            allowNull: false
-        },
-        stock: {
-            type: DataTypes.INTEGER,
-            allowNull: false
-        },
+'use strict';
 
-    });
-    return Product;
-};
+const mysql = require('mysql');
+
+let Schema = mysql.Schema;
+
+let ProductsSchema = new Schema({
+    id: Number,
+    title: String,
+    description: String,
+    manufacturer: String,
+    price: Number,
+    image: String
+}, { collection: 'products' });
+
+module.exports = mongoose.model('Products', ProductsSchema);
